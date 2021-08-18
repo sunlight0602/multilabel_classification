@@ -96,7 +96,7 @@ def train(model, train_dataloader, device, optimizer, scheduler, val_dataloader=
             scheduler.step()
 
             # Print the loss values and time elapsed for every 20 batches
-            if (step % 20 == 0 and step != 0) or (step == len(train_dataloader) - 1):
+            if (step % 1 == 0 and step != 0) or (step == len(train_dataloader) - 1):
                 # Calculate time elapsed for 20 batches
                 time_elapsed = time.time() - t0_batch
 

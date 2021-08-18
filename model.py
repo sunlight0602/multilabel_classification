@@ -13,7 +13,7 @@ class BertClassifier(nn.Module):
 
         # attribute
         # Instantiate BERT model
-        self.bert = BertModel.from_pretrained('bert-base-uncased')
+        self.bert = BertModel.from_pretrained('bert-base-chinese')
         # self.LSTM = nn.LSTM(D_in,D_in,bidirectional=True)
         # self.clf = nn.Linear(D_in*2,2)
 
@@ -63,7 +63,7 @@ def initialize_model(train_dataloader, device, epochs=4):
 
     # Set up the learning rate scheduler
     scheduler = get_linear_schedule_with_warmup(optimizer,
-                                                num_warmup_steps = 0, # Default value
-                                                num_training_steps = total_steps)
+                                                num_warmup_steps=0,  # Default value
+                                                num_training_steps=total_steps)
     
     return bert_classifier, optimizer, scheduler

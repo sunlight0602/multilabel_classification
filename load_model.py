@@ -22,7 +22,8 @@ model = torch.load('./saved_model/save.pt', map_location = device)
 
 # CONFIG and READ FILE
 BATCH_SIZE = 16
-TEST = './data/new_input.csv'
+# TEST = './data/new_input.csv'
+TEST = './data/test.csv'
 test_csv = pd.read_csv(TEST)
 
 # TEST MODEL
@@ -39,6 +40,7 @@ probs = bert_predict(model, test_dataloader, device)
 # Get predictions from the probabilities
 threshold = 0.9
 preds = np.where(probs[:, 1] > threshold, 1, 0)
+print(preds)
 
 # Number of tweets predicted toxic
 print("Number of inputs predicted toxic: ", preds.sum())
