@@ -4,15 +4,35 @@ import time
 import numpy as np
 
 # Specify loss function
-loss_fn = nn.CrossEntropyLoss()
+# loss_fn = nn.CrossEntropyLoss()
+# loss_fn = nn.MultiLabelMarginLoss()
+loss_fn = nn.BCELoss()
+
+
+# def loss_function(input_tensor, output_tensor):
+
+#     assert input_tensor.size() == output_tensor.size()
+
+#     row_size = input_tensor.size()[0]
+#     column_size = output_tensor.size()[1]
+
+#     loss = 0
+#     for i in range(row_size):
+#         for j in range(column_size):
+#             if output_tensor[i][j] == 0:
+#                 loss += input_tensor[i][j] - 0
+#             else:
+#                 loss += 1 - input_tensor[i][j]
+
+#     return torch.tensor(loss)
 
 
 def evaluate(model, val_dataloader, device):
     """After the completion of each training epoch, measure the model's performance
     on our validation set.
     """
-    # Put the model into the evaluation mode. The dropout layers are disabled during
-    # the test time.
+    # Put the model into the evaluation mode.
+    # The dropout layers are disabled during the test time.
     model.eval()
 
     # Tracking variables
@@ -29,14 +49,25 @@ def evaluate(model, val_dataloader, device):
             logits = model(b_input_ids, b_attn_mask)
 
         # Compute loss
+        b_labels = b_labels.float()
         loss = loss_fn(logits, b_labels)
         val_loss.append(loss.item())
 
         # Get the predictions
-        preds = torch.argmax(logits, dim=1).flatten()
+        # preds = torch.argmax(logits, dim=1).flatten()
+        preds = []
+        for idx, logit in enumerate(logits):
+            pred = [1 if l>=0.5 else 0 for l in logit]
+            preds.append(pred)
 
         # Calculate the accuracy rate
-        accuracy = (preds == b_labels).cpu().numpy().mean() * 100
+        # accuracy = (preds == b_labels).cpu().numpy().mean() * 100
+        b_labels_numpy = b_labels.cpu().detach().numpy()
+        correct = 0
+        for idx in range(len(preds)):
+            if (preds[idx] == b_labels_numpy[idx]).all() == True:
+                correct += 1
+        accuracy = correct / len(preds) * 100
         val_accuracy.append(accuracy)
 
     # Compute the average accuracy and loss over the validation set.
@@ -49,6 +80,9 @@ def evaluate(model, val_dataloader, device):
 def train(model, train_dataloader, device, optimizer, scheduler, val_dataloader=None, epochs=4, evaluation=False):
     """Train the BertClassifier model.
     """
+    
+    cur_highest_val_acc = 0
+    
     # Start training loop
     print("Start training...\n")
     for epoch_i in range(epochs):
@@ -71,6 +105,7 @@ def train(model, train_dataloader, device, optimizer, scheduler, val_dataloader=
         # For each batch of training data...
         for step, batch in enumerate(train_dataloader):
             batch_counts += 1
+
             # Load batch to GPU
             b_input_ids, b_attn_mask, b_labels = tuple(t.to(device) for t in batch)
 
@@ -78,10 +113,14 @@ def train(model, train_dataloader, device, optimizer, scheduler, val_dataloader=
             model.zero_grad()
 
             # Perform a forward pass. This will return logits.
-            logits = model(b_input_ids, b_attn_mask)
+            logits = model.forward(b_input_ids, b_attn_mask)
 
             # Compute loss and accumulate the loss values
+            b_labels = b_labels.float()
+
             loss = loss_fn(logits, b_labels)
+            # loss = loss_function(logits, b_labels)
+
             batch_loss += loss.item()
             total_loss += loss.item()
 
@@ -114,19 +153,23 @@ def train(model, train_dataloader, device, optimizer, scheduler, val_dataloader=
         # =======================================
         #               Evaluation
         # =======================================
-        if evaluation == True:
-            # After the completion of each training epoch, measure the model's performance
-
-            # on our validation set.
+        if evaluation is True:
+            # After the completion of each training epoch,
+            # measure the model's performance on our validation set.
             val_loss, val_accuracy = evaluate(model, val_dataloader, device)
 
             # Print performance over the entire training data
             time_elapsed = time.time() - t0_epoch
-            
+
             print(f"{epoch_i + 1:^7} | {'-':^7} | {avg_train_loss:^12.6f} | {val_loss:^10.6f} | {val_accuracy:^9.2f} | {time_elapsed:^9.2f}")
             print("-" * 70)
+
+            if val_accuracy > cur_highest_val_acc:
+                print('Save model')
+                torch.save(model, './saved_model/chi_model.pt')
+
         print("\n")
-    
+
     print("Training complete!")
-    
-    return model
+
+    return model, val_accuracy

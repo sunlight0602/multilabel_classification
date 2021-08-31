@@ -4,7 +4,7 @@ import os
 import torch
 from torch.utils.data import TensorDataset, DataLoader, RandomSampler, SequentialSampler
 
-from preprocess import text_preprocessing, preprocessing_for_bert
+from preprocess import text_preprocessing, preprocessing_for_bert, detokenizer
 from train import train
 from model import BertClassifier, initialize_model
 from utils import set_seed
@@ -12,13 +12,15 @@ from predict import bert_predict
 
 
 # SETTING UP THE GPU IF POSSIBLE
-if torch.cuda.is_available():       
-    device = torch.device("cuda")
-    print(f'There are {torch.cuda.device_count()} GPU(s) available.')
-    print('Device name:', torch.cuda.get_device_name(0))
-else:
-    print('No GPU available, using the CPU instead.')
-    device = torch.device("cpu")
+# if torch.cuda.is_available():       
+#     device = torch.device("cuda")
+#     print(f'There are {torch.cuda.device_count()} GPU(s) available.')
+#     print('Device name:', torch.cuda.get_device_name(0))
+# else:
+#     print('No GPU available, using the CPU instead.')
+#     device = torch.device("cpu")
+
+device = torch.device("cpu")
 
 # CONFIG
 # TRAIN = './data/train.csv'
@@ -37,7 +39,7 @@ EPOCHS = 5
 import jsonlines
 
 dataset = []
-with jsonlines.open('/home/nlplab/sunny/crawl_GoogleMap/dataset.jsonl') as reader:
+with jsonlines.open('/home/nlplab/sunny/crawl_GoogleMap/dataset_training.jsonl') as reader:
     for obj in reader:
         dataset.append(obj)
 dataset = dataset[1:]
@@ -46,7 +48,7 @@ X = []
 Y = []
 for data in dataset:
     X.append(data[0] + ' ' + data[1])
-    Y.append(data[2])
+    Y.append(data[2:])
 
 # SPLIT DATA
 from sklearn.model_selection import train_test_split
@@ -61,10 +63,7 @@ X_train, X_val, y_train, y_val = train_test_split(X, Y, test_size=0.1, random_st
 print('Tokenizing data...')
 train_inputs, train_masks = preprocessing_for_bert(X_train)
 val_inputs, val_masks = preprocessing_for_bert(X_val)
-
-# from transformers import BertTokenizer
-# tokenizer_chi = BertTokenizer.from_pretrained('bert-base-chinese')
-# tokenizer_chi.convert_ids_to_tokens(train_inputs[4])
+# detokenizer(train_inputs[0])
 
 # Convert other data types to torch.Tensor
 train_labels = torch.tensor(y_train)
@@ -84,11 +83,11 @@ val_dataloader = DataLoader(val_data, sampler=val_sampler, batch_size=BATCH_SIZE
 # TRAIN MODEL
 set_seed(42)    # Set seed for reproducibility
 bert_classifier, optimizer, scheduler = initialize_model(train_dataloader, device, epochs = EPOCHS)
-model = train(bert_classifier, train_dataloader, device, optimizer, scheduler, val_dataloader, epochs = EPOCHS, evaluation = True)
+model = train(bert_classifier, train_dataloader, device, optimizer, scheduler, val_dataloader, epochs=EPOCHS, evaluation=True)
 
 # SAVE MODEL
-print('Save model')
-torch.save(model, './saved_model/chi_model.pt')
+# print('Save model')
+# torch.save(model, './saved_model/chi_model.pt')
 
 
 # =========================
