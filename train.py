@@ -3,6 +3,12 @@ import torch.nn as nn
 import time
 import numpy as np
 
+from collections import defaultdict
+
+CONFIDENCE_THRESHOLD = 0.5
+CLASS_NAME = ('Spot', 'Restaurant', 'Lodging')
+# NUM_OF_CLASS = 3
+
 # Specify loss function
 # loss_fn = nn.CrossEntropyLoss()
 # loss_fn = nn.MultiLabelMarginLoss()
@@ -26,6 +32,16 @@ loss_fn = nn.BCELoss()
 
 #     return torch.tensor(loss)
 
+def confusion_matrix_func():
+    return {'TP': 0,
+            'TN': 0,
+            'FP': 0,
+            'FN': 0,
+            'accuracy': 0,
+            'precision': 0,
+            'recall': 0,
+            'f1-score': 0}
+
 
 def evaluate(model, val_dataloader, device):
     """After the completion of each training epoch, measure the model's performance
@@ -38,6 +54,7 @@ def evaluate(model, val_dataloader, device):
     # Tracking variables
     val_accuracy = []
     val_loss = []
+    confusion_matrix = defaultdict(confusion_matrix_func)
 
     # For each batch in our validation set...
     for batch in val_dataloader:
@@ -57,7 +74,7 @@ def evaluate(model, val_dataloader, device):
         # preds = torch.argmax(logits, dim=1).flatten()
         preds = []
         for idx, logit in enumerate(logits):
-            pred = [1 if l>=0.5 else 0 for l in logit]
+            pred = [1 if l>=CONFIDENCE_THRESHOLD else 0 for l in logit]
             preds.append(pred)
 
         # Calculate the accuracy rate
@@ -70,19 +87,43 @@ def evaluate(model, val_dataloader, device):
         accuracy = correct / len(preds) * 100
         val_accuracy.append(accuracy)
 
+        # Count tp, tn, fn, fp for each class
+        for idx_data in range(len(preds)):
+            for idx_class in range(len(preds[idx_data])):
+                if preds[idx_data][idx_class] == b_labels_numpy[idx_data][idx_class] == 1:
+                    confusion_matrix[idx_class]['TP'] += 1
+                elif preds[idx_data][idx_class] == b_labels_numpy[idx_data][idx_class] == 0:
+                    confusion_matrix[idx_class]['TN'] += 1
+                elif preds[idx_data][idx_class] == 0 and b_labels_numpy[idx_data][idx_class] == 1:
+                    confusion_matrix[idx_class]['FN'] += 1
+                elif preds[idx_data][idx_class] == 1 and b_labels_numpy[idx_data][idx_class] == 0:
+                    confusion_matrix[idx_class]['FP'] += 1
+
+    # Calculate confusion matrix for each class
+    for key in confusion_matrix.keys():
+        tp = confusion_matrix[key]['TP']
+        tn = confusion_matrix[key]['TN']
+        fp = confusion_matrix[key]['FP']
+        fn = confusion_matrix[key]['FN']
+
+        confusion_matrix[key]['accuracy'] = (tp + tn) / (tp + tn + fp + fn)
+        confusion_matrix[key]['precision'] = tp / (fp + tp)
+        confusion_matrix[key]['recall'] = tp / (fn + tp)
+        confusion_matrix[key]['f1-score'] = 2 * confusion_matrix[key]['precision'] * confusion_matrix[key]['recall'] / (confusion_matrix[key]['precision'] + confusion_matrix[key]['recall'])
+
     # Compute the average accuracy and loss over the validation set.
     val_loss = np.mean(val_loss)
     val_accuracy = np.mean(val_accuracy)
 
-    return val_loss, val_accuracy
+    return val_loss, val_accuracy, confusion_matrix
 
 
 def train(model, train_dataloader, device, optimizer, scheduler, val_dataloader=None, epochs=4, evaluation=False):
     """Train the BertClassifier model.
     """
-    
+
     cur_highest_val_acc = 0
-    
+
     # Start training loop
     print("Start training...\n")
     for epoch_i in range(epochs):
@@ -156,7 +197,7 @@ def train(model, train_dataloader, device, optimizer, scheduler, val_dataloader=
         if evaluation is True:
             # After the completion of each training epoch,
             # measure the model's performance on our validation set.
-            val_loss, val_accuracy = evaluate(model, val_dataloader, device)
+            val_loss, val_accuracy, confusion_matrix = evaluate(model, val_dataloader, device)
 
             # Print performance over the entire training data
             time_elapsed = time.time() - t0_epoch
@@ -165,8 +206,17 @@ def train(model, train_dataloader, device, optimizer, scheduler, val_dataloader=
             print("-" * 70)
 
             if val_accuracy > cur_highest_val_acc:
+                # Save model
                 print('Save model')
                 torch.save(model, './saved_model/chi_model.pt')
+                
+                # Record confusion matrix
+                with open('./saved_model/chi_model.txt', 'w') as f:
+                    f.write('{:^15}|{:^13}|{:^13}|{:^13}|{:^13}\n'.format('', 'accuracy', 'precision', 'recall', 'f1-score'))
+                    for idx, key in enumerate(confusion_matrix.keys()):
+                        f.write('{:^15}|{:^13.2f}|{:^13.2f}|{:^13.2f}|{:^13.2f}\n'.format(CLASS_NAME[idx], confusion_matrix[key]['accuracy'], confusion_matrix[key]['precision'], confusion_matrix[key]['recall'], confusion_matrix[key]['f1-score']))
+
+                    f.write('validation_accuracy: {}\n'.format(val_accuracy))
 
         print("\n")
 

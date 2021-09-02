@@ -39,7 +39,7 @@ EPOCHS = 5
 import jsonlines
 
 dataset = []
-with jsonlines.open('/home/nlplab/sunny/crawl_GoogleMap/dataset_training.jsonl') as reader:
+with jsonlines.open('./data/dataset_training.jsonl') as reader:
     for obj in reader:
         dataset.append(obj)
 dataset = dataset[1:]

@@ -7,16 +7,17 @@ from predict import bert_predict
 
 
 # SETTING UP THE GPU IF POSSIBLE
-if torch.cuda.is_available():       
-    device = torch.device("cuda")
-    print(f'There are {torch.cuda.device_count()} GPU(s) available.')
-    print('Device name:', torch.cuda.get_device_name(0))
-else:
-    print('No GPU available, using the CPU instead.')
-    device = torch.device("cpu")
+# if torch.cuda.is_available():       
+#     device = torch.device("cuda")
+#     print(f'There are {torch.cuda.device_count()} GPU(s) available.')
+#     print('Device name:', torch.cuda.get_device_name(0))
+# else:
+#     print('No GPU available, using the CPU instead.')
+#     device = torch.device("cpu")
+device = torch.device("cpu")
 
 # LOAD MODEL
-model = torch.load('./saved_model/save.pt', map_location = device)
+model = torch.load('./saved_model/save.pt', map_location=device)
 
 # model.eval()
 
@@ -32,7 +33,7 @@ test_inputs, test_masks = preprocessing_for_bert(test_csv.comment_text)
 # Create the DataLoader for our test set
 test_dataset = TensorDataset(test_inputs, test_masks)
 test_sampler = SequentialSampler(test_dataset)
-test_dataloader = DataLoader(test_dataset, sampler = test_sampler, batch_size = BATCH_SIZE)
+test_dataloader = DataLoader(test_dataset, sampler=test_sampler, batch_size=BATCH_SIZE)
 
 # PREDICT
 probs = bert_predict(model, test_dataloader, device)
