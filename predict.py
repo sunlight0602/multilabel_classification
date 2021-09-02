@@ -1,12 +1,13 @@
 import torch
-import torch.nn.functional as F
+# import torch.nn.functional as F
+
 
 def bert_predict(model, test_dataloader, device):
     """Perform a forward pass on the trained BERT model to predict probabilities
     on the test set.
     """
-    # Put the model into the evaluation mode. The dropout layers are disabled during
-    # the test time.
+    # Put the model into the evaluation mode. The dropout layers are disabled
+    # during the test time.
     model.eval()
 
     all_logits = []
@@ -25,6 +26,7 @@ def bert_predict(model, test_dataloader, device):
     all_logits = torch.cat(all_logits, dim=0)
 
     # Apply softmax to calculate probabilities
-    probs = F.softmax(all_logits, dim=1).cpu().numpy()
+    # probs = F.softmax(all_logits, dim=1).cpu().numpy()
 
-    return probs
+    # return probs
+    return all_logits

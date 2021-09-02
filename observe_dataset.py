@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 dataset = []
-with jsonlines.open('./data/dataset_training.jsonl') as reader:
+with jsonlines.open('./data/dataset_training.jsonl', 'r') as reader:
     for obj in reader:
         dataset.append(obj)
 dataset = dataset[1:]
@@ -37,10 +37,10 @@ plt.bar(x, y_labels)
 plt.xticks(x, x_labels)
 plt.xlabel('(Spot, Restaurant, Lodging)')
 plt.ylabel('Frequency')
-plt.title('Frequency Observation')
+plt.title('Frequency Distribution')
 
 for i in range(len(x_labels)):
     plt.text(i, y_labels[i], str(int((y_labels[i] / sum(y_labels) * 100)))+'%')
 
-plt.savefig('frequency_observation.png', dpi=400)
+plt.savefig('./data/frequency_distribution.png', dpi=400)
 # plt.show()

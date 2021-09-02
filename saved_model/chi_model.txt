@@ -1,0 +1,5 @@
+               |  accuracy   |  precision  |   recall    |  f1-score   
+     Spot      |    93.18    |   100.00    |    50.00    |    66.67    
+  Restaurant   |    88.64    |    87.88    |    96.67    |    92.06    
+    Lodging    |    95.45    |    87.50    |    87.50    |    87.50    
+validation_accuracy: 89.58%

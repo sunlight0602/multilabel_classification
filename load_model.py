@@ -1,10 +1,18 @@
 import torch
-import numpy as np
-import pandas as pd 
+# import numpy as np
+# import pandas as pd 
+import jsonlines
+
 from preprocess import preprocessing_for_bert
 from torch.utils.data import TensorDataset, DataLoader, SequentialSampler
 from predict import bert_predict
 
+BATCH_SIZE = 16
+TEST_DATA = './data/dataset_testing.jsonl'
+OUTPUT_DATA = './data/prediction_testing.txt'
+CONFIDENCE_THRESHOLD = 0.5
+# TEST = './data/test.csv'
+# test_csv = pd.read_csv(TEST)
 
 # SETTING UP THE GPU IF POSSIBLE
 # if torch.cuda.is_available():       
@@ -17,43 +25,47 @@ from predict import bert_predict
 device = torch.device("cpu")
 
 # LOAD MODEL
-model = torch.load('./saved_model/save.pt', map_location=device)
+model = torch.load('./saved_model/chi_model.pt', map_location=device)
 
-# model.eval()
+# Read testing data
+dataset = []
+with jsonlines.open(TEST_DATA, 'r') as reader:
+    for obj in reader:
+        dataset.append(obj)
+dataset = dataset[1:]
 
-# CONFIG and READ FILE
-BATCH_SIZE = 16
-# TEST = './data/new_input.csv'
-TEST = './data/test.csv'
-test_csv = pd.read_csv(TEST)
+X = []
+for data in dataset:
+    X.append(data[0] + ' ' + data[1])
 
-# TEST MODEL
-test_inputs, test_masks = preprocessing_for_bert(test_csv.comment_text)
+# Preprocess testing data
+test_inputs, test_masks = preprocessing_for_bert(X)
 
 # Create the DataLoader for our test set
 test_dataset = TensorDataset(test_inputs, test_masks)
 test_sampler = SequentialSampler(test_dataset)
 test_dataloader = DataLoader(test_dataset, sampler=test_sampler, batch_size=BATCH_SIZE)
 
-# PREDICT
-probs = bert_predict(model, test_dataloader, device)
+# Predict
+# probs = bert_predict(model, test_dataloader, device)
+all_logits = bert_predict(model, test_dataloader, device)
 
 # Get predictions from the probabilities
-threshold = 0.9
-preds = np.where(probs[:, 1] > threshold, 1, 0)
-print(preds)
+preds = []
+for idx, logit in enumerate(all_logits):
+    pred = [1 if l>=CONFIDENCE_THRESHOLD else 0 for l in logit]
+    preds.append([dataset[idx][0]] + pred)
 
-# Number of tweets predicted toxic
-print("Number of inputs predicted toxic: ", preds.sum())
+# Write predictions
+with open(OUTPUT_DATA, 'w') as f:
+    for pred in preds:
+        f.write(pred[0])
 
-test_csv['toxic'] = preds
+        if pred[1] == 1:
+            f.write(' | Spot')
+        if pred[2] == 1:
+            f.write(' | Restaurant')
+        if pred[3] == 1:
+            f.write(' | Lodging')
 
-test_csv.drop('comment_text', axis = 1, inplace = True)
-
-test_csv['severe_toxic'] = 0
-test_csv['obscene'] = 0
-test_csv['threat'] = 0
-test_csv['insult'] = 0
-test_csv['identify_hate'] = 0
-
-test_csv.to_csv('./data/submission.csv')
+        f.write('\n')
