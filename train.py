@@ -217,6 +217,8 @@ def train(model, train_dataloader, device, optimizer, scheduler, val_dataloader=
                         f.write('{:^15}|{:^13.2f}%|{:^13.2f}%|{:^13.2f}%|{:^13.2f}%\n'.format(CLASS_NAME[idx], confusion_matrix[key]['accuracy']*100, confusion_matrix[key]['precision']*100, confusion_matrix[key]['recall']*100, confusion_matrix[key]['f1-score']*100))
 
                     f.write('validation_accuracy: {:.2f}%\n'.format(val_accuracy))
+                
+                cur_highest_val_acc = val_accuracy
 
         print("\n")
 
