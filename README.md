@@ -1,6 +1,10 @@
 # multilabel_classification
 
-根據景點評論，將景點分類為「景點」／「餐廳」／「住宿」（可多選）
+根據景點評論，將景點分類為「景點」／「餐廳」／「住宿」（可多選） \
+
+Fine-tuned with Bert\
+No preprocess \
+Concat 5 reviews of each spot from Google Map to form a training data
 
 # Setup
 
