@@ -2,7 +2,6 @@
 saved_model/save.pt
 saved_model/chi_model.pt
 
-data/dataset_training.jsonl
 data/new_input.csv
 data/sample_submission.csv
 data/submission.csv
