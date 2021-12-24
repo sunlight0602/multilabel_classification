@@ -6,6 +6,7 @@
 
 Switch to GPU if needed, current setup using CPU
 
+1. Run ```pip install -r requirements.txt``` in terminal
 1. Get ```data/dataset_training.jsonl```
 2. Run ```python main.py``` in terminal
 3. Model will be in ```saved_model/chi_model.pt```
